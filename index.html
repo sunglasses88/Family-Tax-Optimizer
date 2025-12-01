@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>家庭个税优化计算器 (全功能终极版)</title>
+    <style>
+        :root { --primary: #3f51b5; --accent: #ff9800; --bg: #f4f7f6; --text: #2c3e50; --border: #e0e0e0; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background: var(--bg); color: var(--text); padding: 20px; line-height: 1.5; }
+        .container { max-width: 1000px; margin: 0 auto; background: #fff; padding: 30px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.05); }
+        h1 { text-align: center; margin-bottom: 25px; font-weight: 700; color: #1a237e; }
+        
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px; }
+        @media(max-width:768px){ .grid-2 { grid-template-columns: 1fr; } }
+
+        /* 卡片样式 */
+        .card { border: 1px solid var(--border); border-radius: 8px; padding: 20px; background: #fff; }
+        .card-header { font-weight: bold; border-bottom: 2px solid #f0f0f0; padding-bottom: 10px; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; }
+        
+        /* 标签 */
+        .tag { padding: 3px 8px; border-radius: 4px; color: #fff; font-size: 12px; font-weight: bold; }
+        .tag-a { background: #3f51b5; }
+        .tag-b { background: #e91e63; }
+
+        /* 表单控件 */
+        .form-group { margin-bottom: 12px; }
+        .form-group label { display: block; font-size: 13px; color: #666; margin-bottom: 4px; font-weight: 500; }
+        input[type="number"], select { width: 100%; padding: 9px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; font-size: 14px; }
+        input:focus, select:focus { border-color: var(--primary); outline: none; }
+
+        /* 自动计算盒子 */
+        .auto-box { background: #f8fbff; border: 1px dashed #bbdefb; padding: 12px; border-radius: 6px; margin-bottom: 12px; display: none; }
+        .auto-box.show { display: block; }
+        .toggle-label { font-size: 13px; color: var(--primary); cursor: pointer; display: flex; align-items: center; }
+        .toggle-label input { margin-right: 6px; }
+
+        /* 策略区域 */
+        .strategy-section { background: #fff8e1; border: 1px solid #ffe0b2; padding: 20px; border-radius: 8px; margin-top: 20px; }
+        .warn-text { color: #c62828; font-size: 12px; background: #ffebee; padding: 8px; border-radius: 4px; margin-top: 5px; display: none; }
+        
+        /* 结果区域 */
+        .result-bar { background: #263238; color: #fff; padding: 20px; border-radius: 8px; margin-top: 25px; display: flex; justify-content: space-between; align-items: center; }
+        .save-val { color: var(--accent); font-size: 26px; font-weight: bold; }
+
+        /* 表格 */
+        .table-wrap { overflow-x: auto; margin-top: 20px; }
+        table { width: 100%; border-collapse: collapse; font-size: 13px; }
+        th { background: #eceff1; padding: 12px; text-align: left; font-weight: 600; color: #555; white-space: nowrap; }
+        td { padding: 10px 12px; border-bottom: 1px solid #eee; }
+        tr.best-row { background: #e0f2f1; font-weight: 700; border-left: 4px solid var(--success); }
+        tr.clickable { cursor: pointer; transition: background 0.2s; }
+        tr.clickable:hover { background: #f5f5f5; }
+        
+        /* 详情展开 */
+        tr.detail-row { display: none; background: #fafafa; }
+        tr.detail-row.open { display: table-row; }
+        .detail-pane { padding: 15px; border-left: 4px solid #ddd; display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        .detail-col h4 { margin: 0 0 10px 0; font-size: 14px; border-bottom: 1px solid #eee; padding-bottom: 5px; }
+        .calc-line { display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 4px; color: #555; }
+        .calc-line.total { font-weight: bold; color: #000; border-top: 1px dashed #ccc; padding-top: 4px; margin-top: 4px; }
+
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>👨‍👩‍👧‍👦 家庭个税优化计算器 <span style="font-size:14px;font-weight:normal;color:#888;">(终极版)</span></h1>
+
+    <div class="grid-2">
+        <div class="card">
+            <div class="card-header">
+                <span><span class="tag tag-a">A</span> 收入情况 (如丈夫)</span>
+            </div>
+            <div class="form-group">
+                <label>年度税前总收入 (元)</label>
+                <input type="number" id="incA" value="300000" oninput="calc()">
+            </div>
+            
+            <div class="form-group">
+                <label class="toggle-label">
+                    <input type="checkbox" id="autoA" onchange="toggleAuto('A')" checked> 
+                    自动计算五险一金
+                </label>
+                <div id="boxAutoA" class="auto-box show">
+                    <div class="form-group">
+                        <label>月社保基数</label>
+                        <input type="number" id="baseA" value="20000" oninput="calc()">
+                    </div>
+                    <div class="form-group">
+                        <label>个人缴纳比例合计 (%)</label>
+                        <input type="number" id="rateA" value="20.5" placeholder="默认约20.5%">
+                    </div>
+                    <div style="font-size:12px; color:#666;">👉 年扣除: <span id="resSocA" style="font-weight:bold">0</span></div>
+                </div>
+                <div id="boxManualA" style="display:none;">
+                    <label>五险一金年缴纳总额</label>
+                    <input type="number" id="manualSocA" value="0" oninput="calc()">
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>其他固定扣除 (年总额)</label>
+                <input type="number" id="fixA" value="0" placeholder="赡养老人/大病医疗等" oninput="calc()">
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <span><span class="tag tag-b">B</span> 收入情况 (如妻子)</span>
+            </div>
+            <div class="form-group">
+                <label>年度税前总收入 (元)</label>
+                <input type="number" id="incB" value="150000" oninput="calc()">
+            </div>
+
+            <div class="form-group">
+                <label class="toggle-label">
+                    <input type="checkbox" id="autoB" onchange="toggleAuto('B')" checked> 
+                    自动计算五险一金
+                </label>
+                <div id="boxAutoB" class="auto-box show">
+                    <div class="form-group">
+                        <label>月社保基数</label>
+                        <input type="number" id="baseB" value="10000" oninput="calc()">
+                    </div>
+                    <div class="form-group">
+                        <label>个人缴纳比例合计 (%)</label>
+                        <input type="number" id="rateB" value="20.5">
+                    </div>
+                    <div style="font-size:12px; color:#666;">👉 年扣除: <span id="resSocB" style="font-weight:bold">0</span></div>
+                </div>
+                <div id="boxManualB" style="display:none;">
+                    <label>五险一金年缴纳总额</label>
+                    <input type="number" id="manualSocB" value="0" oninput="calc()">
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>其他固定扣除 (年总额)</label>
+                <input type="number" id="fixB" value="0" oninput="calc()">
+            </div>
+        </div>
+    </div>
+
+    <div class="strategy-section">
+        <h3 style="margin:0 0 15px 0; color:#e65100; font-size:16px;">⚖️ 专项附加扣除智能分配</h3>
+        
+        <div class="grid-2">
+            <div>
+                <div class="form-group">
+                    <label>👶 3岁以下婴幼儿 (个) [2000元/月]</label>
+                    <input type="number" id="numInfant" value="1" min="0" oninput="calc()">
+                </div>
+                <div class="form-group">
+                    <label>🎓 子女教育 (个) [2000元/月]</label>
+                    <input type="number" id="numChild" value="0" min="0" oninput="calc()">
+                </div>
+            </div>
+
+            <div style="background:#fff; padding:15px; border-radius:6px; border:1px solid #eee;">
+                <div class="form-group">
+                    <label style="color:#d81b60;">🏘️ 住房扣除类型 (二选一)</label>
+                    <select id="houseType" onchange="toggleHouse()">
+                        <option value="none">无</option>
+                        <option value="loan" selected>住房贷款利息 (1000/月)</option>
+                        <option value="rent">住房租金 (按城市标准)</option>
+                    </select>
+                </div>
+
+                <div id="panelLoan">
+                    <div style="font-size:12px; color:#666;">规则：首套房贷利息，定额扣除12000元/年。</div>
+                </div>
+
+                <div id="panelRent" style="display:none;">
+                    <div class="form-group">
+                        <label>租金扣除标准 (元/月)</label>
+                        <input type="number" id="rentStd" value="1500" oninput="calc()">
+                        <div style="font-size:12px; color:#999;">(直辖市/省会1500, 大于100万人口1100, 其他800)</div>
+                    </div>
+                    <div class="form-group">
+                        <label>夫妻工作城市</label>
+                        <select id="rentMode" onchange="calc()">
+                            <option value="same">同城 (仅一方可扣，不可平分)</option>
+                            <option value="diff">异地 (两地均无房，可分别扣)</option>
+                        </select>
+                    </div>
+                    <div id="rentWarn" class="warn-text">⚠️ 提示：同城租房不能平分，只能由承租人(一方)扣除。</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="result-bar">
+        <div>
+            <div style="font-size:14px; opacity:0.8">最优方案家庭总税额</div>
+            <div style="font-size:24px; font-weight:bold"><span id="txtTotal">0</span> 元</div>
+        </div>
+        <div style="text-align:right">
+            <div style="font-size:14px; opacity:0.8">相比最差方案节省</div>
+            <div class="save-val"><span id="txtSave">0</span> 元</div>
+        </div>
+    </div>
+
+    <div class="table-wrap">
+        <h4 style="margin:20px 0 10px 0; color:#555;">📊 方案对比 (点击行查看计算过程)</h4>
+        <table id="tblResult">
+            <thead>
+                <tr>
+                    <th width="50">排名</th>
+                    <th>👶 育儿分配</th>
+                    <th>🎓 教育分配</th>
+                    <th>🏘️ 住房分配</th>
+                    <th align="right">A 税额</th>
+                    <th align="right">B 税额</th>
+                    <th align="right">家庭总税</th>
+                    <th width="30"></th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </div>
+
+</div>
+
+<script>
+    // 个税税率表 (2024综合所得)
+    const BRACKETS = [
+        { limit: 36000, rate: 0.03, ded: 0 },
+        { limit: 144000, rate: 0.10, ded: 2520 },
+        { limit: 300000, rate: 0.20, ded: 16920 },
+        { limit: 420000, rate: 0.25, ded: 31920 },
+        { limit: 660000, rate: 0.30, ded: 52920 },
+        { limit: 960000, rate: 0.35, ded: 85920 },
+        { limit: Infinity, rate: 0.45, ded: 181920 }
+    ];
+
+    // 工具函数
+    const $ = id => document.getElementById(id);
+    const getVal = id => parseFloat($(id).value) || 0;
+
+    // 切换社保计算模式
+    function toggleAuto(role) {
+        const isAuto = $('auto' + role).checked;
+        $('boxAuto' + role).style.display = isAuto ? 'block' : 'none';
+        $('boxManual' + role).style.display = isAuto ? 'none' : 'block';
+        calc();
+    }
+
+    // 切换住房类型
+    function toggleHouse() {
+        const type = $('houseType').value;
+        $('panelLoan').style.display = type === 'loan' ? 'block' : 'none';
+        $('panelRent').style.display = type === 'rent' ? 'block' : 'none';
+        
+        // 租金同城警告
+        const rentMode = $('rentMode').value;
+        if(type === 'rent' && rentMode === 'same') $('rentWarn').style.display = 'block';
+        else $('rentWarn').style.display = 'none';
+        
+        calc();
+    }
+
+    // 核心算税 (返回详细对象)
+    function computeTaxDetail(income, social, ded) {
+        let taxable = income - 60000 - social - ded;
+        if (taxable < 0) taxable = 0;
+        
+        let tax = 0, rate = 0, qd = 0;
+        for (let b of BRACKETS) {
+            if (taxable <= b.limit) {
+                rate = b.rate; qd = b.ded;
+                tax = taxable * rate - qd;
+                break;
+            }
+        }
+        if (tax < 0) tax = 0;
+        
+        return { income, social, ded, taxable, rate, qd, tax };
+    }
+
+    // 主计算逻辑
+    function calc() {
+        // 1. 准备社保数据
+        let socA = 0, socB = 0;
+        
+        // A
+        if ($('autoA').checked) {
+            socA = getVal('baseA') * (getVal('rateA')/100) * 12;
+            $('resSocA').innerText = socA.toFixed(0);
+        } else {
+            socA = getVal('manualSocA');
+        }
+        
+        // B
+        if ($('autoB').checked) {
+            socB = getVal('baseB') * (getVal('rateB')/100) * 12;
+            $('resSocB').innerText = socB.toFixed(0);
+        } else {
+            socB = getVal('manualSocB');
+        }
+
+        // 2. 准备基础扣除
+        const incA = getVal('incA'), baseDedA = getVal('fixA');
+        const incB = getVal('incB'), baseDedB = getVal('fixB');
+
+        // 3. 准备可分配额度
+        const amtInfant = getVal('numInfant') * 24000;
+        const amtChild = getVal('numChild') * 24000;
+        
+        // 4. 住房逻辑处理
+        const houseType = $('houseType').value;
+        let houseAmt = 0;
+        let houseOpts = [{a:0, b:0, n:'-' }]; // 默认无
+
+        if (houseType === 'loan') {
+            houseAmt = 12000; // 房贷定额
+            // 房贷：A100, 平分, B100
+            houseOpts = [
+                {a:1, b:0, n:'A全扣'},
+                {a:0.5, b:0.5, n:'平分'},
+                {a:0, b:1, n:'B全扣'}
+            ];
+        } else if (houseType === 'rent') {
+            houseAmt = getVal('rentStd') * 12; // 租金月标准*12
+            const rentMode = $('rentMode').value;
+            if (rentMode === 'same') {
+                // 同城：互斥，不可平分
+                houseOpts = [
+                    {a:1, b:0, n:'A全扣'},
+                    {a:0, b:1, n:'B全扣'}
+                ];
+                $('rentWarn').style.display = 'block';
+            } else {
+                // 异地：双倍
+                houseOpts = [{a:1, b:1, n:'双倍(异地)'}];
+                $('rentWarn').style.display = 'none';
+            }
+        }
+
+        // 育儿/教育 分配选项
+        const stdOpts = [
+            {a:1, b:0, n:'A全扣'},
+            {a:0.5, b:0.5, n:'平分'},
+            {a:0, b:1, n:'B全扣'}
+        ];
+
+        let scenarios = [];
+
+        // 5. 暴力穷举
+        stdOpts.forEach(optInf => {
+            stdOpts.forEach(optChi => {
+                houseOpts.forEach(optHou => {
+                    
+                    let dedA = baseDedA + (amtInfant*optInf.a) + (amtChild*optChi.a) + (houseAmt*optHou.a);
+                    let dedB = baseDedB + (amtInfant*optInf.b) + (amtChild*optChi.b) + (houseAmt*optHou.b);
+
+                    let resA = computeTaxDetail(incA, socA, dedA);
+                    let resB = computeTaxDetail(incB, socB, dedB);
+                    let total = resA.tax + resB.tax;
+
+                    scenarios.push({
+                        id: Math.random().toString(36).substr(2,9),
+                        n1: amtInfant ? optInf.n : '-',
+                        n2: amtChild ? optChi.n : '-',
+                        n3: houseAmt ? optHou.n : '-',
+                        resA: resA,
+                        resB: resB,
+                        total: total
+                    });
+                });
+            });
+        });
+
+        // 6. 排序与渲染
+        scenarios.sort((a,b) => a.total - b.total);
+        const best = scenarios[0];
+        const worst = scenarios[scenarios.length-1];
+
+        $('txtTotal').innerText = best.total.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2});
+        $('txtSave').innerText = (worst.total - best.total).toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2});
+
+        const tbody = $('tblResult').querySelector('tbody');
+        tbody.innerHTML = '';
+
+        // 简单去重展示前10个
+        let count = 0;
+        scenarios.forEach((s, i) => {
+            if (count > 9 && s.total !== worst.total) return;
+            
+            let isBest = (i === 0);
+            let cls = isBest ? 'best-row' : '';
+            let diff = s.total - best.total;
+            let diffStr = isBest ? '<span style="color:green">最优</span>' : `<span style="color:red">+${diff.toFixed(0)}</span>`;
+
+            let rowHtml = `
+                <tr class="clickable ${cls}" onclick="toggleRow('${s.id}')">
+                    <td>${i+1}</td>
+                    <td>${s.n1}</td>
+                    <td>${s.n2}</td>
+                    <td>${s.n3}</td>
+                    <td align="right">${s.resA.tax.toFixed(0)}</td>
+                    <td align="right">${s.resB.tax.toFixed(0)}</td>
+                    <td align="right"><strong>${s.resA.tax+s.resB.tax}</strong></td>
+                    <td align="center">${diffStr}</td>
+                </tr>
+                <tr id="det-${s.id}" class="detail-row">
+                    <td colspan="8">
+                        <div class="detail-pane">
+                            ${renderDetailCol('A', s.resA, '#3f51b5')}
+                            ${renderDetailCol('B', s.resB, '#e91e63')}
+                        </div>
+                    </td>
+                </tr>
+            `;
+            tbody.insertAdjacentHTML('beforeend', rowHtml);
+            count++;
+        });
+    }
+
+    function renderDetailCol(role, res, color) {
+        return `
+        <div class="detail-col">
+            <h4 style="color:${color}">👤 角色 ${role} 计算明细</h4>
+            <div class="calc-line"><span>税前收入</span> <span>${res.income.toLocaleString()}</span></div>
+            <div class="calc-line"><span>- 减除费用</span> <span>60,000</span></div>
+            <div class="calc-line"><span>- 五险一金</span> <span>${res.social.toLocaleString()}</span></div>
+            <div class="calc-line"><span>- 专项附加</span> <span>${res.ded.toLocaleString()}</span></div>
+            <div class="calc-line total"><span>= 应纳税所得额</span> <span>${res.taxable.toLocaleString()}</span></div>
+            <div class="calc-line"><span>× 适用税率</span> <span>${(res.rate*100).toFixed(0)}%</span></div>
+            <div class="calc-line"><span>- 速算扣除数</span> <span>${res.qd}</span></div>
+            <div class="calc-line total" style="color:${color};font-size:14px;"><span>= 最终税额</span> <span>${res.tax.toFixed(2)}</span></div>
+        </div>`;
+    }
+
+    function toggleRow(id) {
+        const row = $('det-'+id);
+        row.classList.toggle('open');
+    }
+
+    // 初始化事件监听
+    $('rentMode').addEventListener('change', toggleHouse);
+    toggleHouse(); // 初始运行
+</script>
+
+</body>
+</html>
